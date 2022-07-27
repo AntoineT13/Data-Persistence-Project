@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,8 +12,12 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestScoreText;
     public GameObject GameOverText;
-    
+
+    public static string bestPlayerName;
+    public static int bestPlayerScore;
+
     private bool m_Started = false;
     private int m_Points;
     
@@ -36,6 +41,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        LoadHighscoreFromFile();
+        SetHighscore();
     }
 
     private void Update()
@@ -72,5 +80,60 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        CompareScore();
+    }
+
+    public void CompareScore()
+    {
+        if (m_Points > bestPlayerScore)
+        {
+            bestPlayerName = PlayerSessionData.Instance.playerName;
+            bestPlayerScore = m_Points;
+            SaveHighscoreToFile();
+        }
+    }
+
+    public void SetHighscore()
+    {
+        if (bestPlayerName == null)
+        {
+            bestPlayerName = "";
+            bestPlayerScore = 0;
+        }
+
+        BestScoreText.text = $"Best Score - {bestPlayerName}: {bestPlayerScore}";
+    }
+
+    public void SaveHighscoreToFile()
+    {
+        HighscoreData data = new HighscoreData
+        {
+            player = bestPlayerName,
+            score = bestPlayerScore
+        };
+
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadHighscoreFromFile()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            HighscoreData data = JsonUtility.FromJson<HighscoreData>(json);
+
+            bestPlayerName = data.player;
+            bestPlayerScore = data.score;
+        }
+    }
+
+    [System.Serializable]
+    class HighscoreData
+    {
+        public string player;
+        public int score;
     }
 }
